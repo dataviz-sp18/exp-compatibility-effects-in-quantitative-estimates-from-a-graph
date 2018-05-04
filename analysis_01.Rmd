@@ -1,0 +1,42 @@
+---
+title: "analysis_01"
+author: "Misha Ash"
+date: "5/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(stringr)
+library(dplyr)
+library(data.table)
+
+library(productplots) # for mosaics
+library(forcats)
+library(ggplot2)
+library(GGally)
+library(psych)
+
+library(modelr)
+# library(ggrepel)
+library(broom)
+library(descr) # for descriptive crosstabs
+
+library(wesanderson)
+library(ggthemes)
+
+```
+
+# data import and tidying
+```{r}
+# ELAN encoding (n=24) with added accuracy, item code, and other item variables
+prelim_data <- read_csv("~/R/Data Viz/exp-compatibility-effects-in-quantitative-estimates-from-a-graph/data/changes_prelim_2018-05-18_17-26.csv", skip = 1)
+
+
+```
+
+
+
+
