@@ -1,11 +1,11 @@
 ---
-title: "analysis_01"
+title: "Do gridlines on a line graph correct for compatibility effects in quantitative estimates of change?"
 author: "Misha Ash"
 date: "5/3/2018"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
@@ -29,14 +29,111 @@ library(ggthemes)
 
 ```
 
-# data import and tidying
-```{r}
-# ELAN encoding (n=24) with added accuracy, item code, and other item variables
-prelim_data <- read_csv("~/R/Data Viz/exp-compatibility-effects-in-quantitative-estimates-from-a-graph/data/changes_prelim_2018-05-18_17-26.csv", skip = 1)
+```{r ingest data, include = FALSE}
+# qualtrics batch
+qualtrics_batch_1 <- read_csv("~/R/Data Viz/exp-compatibility-effects-in-quantitative-estimates-from-a-graph/data/Judging changes_2018-05-04_1623.csv", skip = 1)
+
+mturk_batch_1 <- read_csv("~/R/Data Viz/exp-compatibility-effects-in-quantitative-estimates-from-a-graph/data/Batch_3219791_batch_results_2018-05-04_1623.csv")
+
+
+```
+
+```{r check responses, include=FALSE}
+mturk_qual_code <- full_join(qualtrics_batch_1, mturk_batch_1, by = c("MTurkCode" = "Answer.surveycode")) %>%
+  select("Duration (in seconds)", "Response ID", "MTurkCode", "WorkTimeInSeconds") 
+
+mturk_qual_code <- mturk_qual_code %>%
+  filter(WorkTimeInSeconds < 30 | is.na(MTurkCode))
+```
+
+```{r tidy}
+
+tidy_qualtrics_batch_1 <- qualtrics_batch_1 %>%
+  
+  filter(Finished == 1, 
+         .[,18] == 2 | .[,71] == 2, # min value qualification for increasing (QID5, QID14)
+         .[,19] == 4 | .[,72] == 4, # max value qualification for increasing (QID8, QID15)
+         !is.na(.[,123]), # direction value not missing
+         !is.na(.[,124]), # valence value not missing
+         !is.na(.[,125]), # gridline value not missing
+         !is.na(.[,126])) %>% # city value not missing
+  
+  select("Response ID",
+         "User Language",
+         "Duration (in seconds)",
+         "Indicate how much the Happiness Score changed between 2015 and 2017. - Happiness Score Change", 
+         "Indicate how much the Sadness Score changed between 2015 and 2017. - Happiness Score Change", 
+         "direction", 
+         "valence", 
+         "gridline", 
+         "city") %>%
+  
+  data.table::setnames(old = c("Response ID", "User Language", "Duration (in seconds)", "Indicate how much the Happiness Score changed between 2015 and 2017. - Happiness Score Change", "Indicate how much the Sadness Score changed between 2015 and 2017. - Happiness Score Change"), 
+                       new = c("id", "language", "duration_sec", "happy_change", "sad_change")) %>%
+  
+  gather(key = score, value = est_change, happy_change, sad_change) %>%
+  filter(!is.na(est_change)) %>%
+  select(-score) %>%
+  
+  mutate(city = str_replace(tidy_qualtrics_batch_1$city, "Alfos", "Aflos")) %>%
+  
+  # add compatibility condition
+  mutate(compatibility = 
+           ifelse((.$direction == "increasing" & .$valence == "happiness" |
+             .$direction == "decreasing" & .$valence == "sadness"), 1, 0)) %>%
+  
+  # calculate numeric estimate errors
+  mutate(act_change = ifelse(.$direction == "decreasing", -77, 77)) %>%
+  mutate(diff_change = as.double(est_change) - act_change) %>%
+  
+  # calculate absolute value estimate errors
+  mutate(abs_change = 77) %>%
+  mutate(error = abs((abs(as.double(est_change)) - abs_change)))
+
+```
+
+### exploratory glances
+
+Mean error does not differ by city, so this control can be set aside.
+```{r error by city, include = FALSE}
+ggplot(tidy_qualtrics_batch_1, aes(as_factor(city), error)) + 
+  stat_summary(fun.y = "mean", geom = "bar", fill =  "#628B9F") + 
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2)
+```
+
+
+
+
+
+```{r exploratory glance}
+
+ggplot(tidy_qualtrics_batch_1, aes(direction, error)) + 
+  stat_summary(fun.y = "mean", geom = "bar", fill =  "#628B9F") + 
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) #+
+  facet_wrap(~ compatibility)
+
+
+
+# 
+mean_accuracy_compat_grid <- tidy_qualtrics_batch_1 %>%
+  dplyr::select(error, compatibility, gridline) %>%
+  dplyr::group_by(compatibility, gridline) %>%
+  dplyr::summarize(mean_error = sum(error)/length(error), n = length(error)) 
+
+#
+tbl_accuracy_type_order <- study_01 %>%
+  dplyr::select(compatibility, trial_type, SPATIAL_FIRST) %>%
+  data.table()
 
 
 ```
 
 
 
+
+
+
+actual values used: 
+*min = 16
+*max = 93
 
