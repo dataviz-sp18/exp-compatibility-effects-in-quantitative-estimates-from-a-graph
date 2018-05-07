@@ -1043,12 +1043,6 @@ increasing happiness visualization (compatible)
     ggtitle('Happiness in A') +
     xlab('') +
     ylab('Happiness Score')
-
-```
-
-```{r}
-gridExtra::grid.arrange(grobs = dlply(d, .(id1, id2), 
-     function(x) p %+% x + ggtitle(paste(unique(x$id1), unique(x$id2)))))
 ```
 
 
